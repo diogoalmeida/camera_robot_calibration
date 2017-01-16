@@ -1,31 +1,31 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 """
-Copyright (c) 2014, Gianni Borghesan 
-All rights reserved. 
+Copyright (c) 2014, Gianni Borghesan
+All rights reserved.
 
-Redistribution and use in source and binary forms, with or without 
-modification, are permitted provided that the following conditions are met: 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
 
- * Redistributions of source code must retain the above copyright notice, 
-   this list of conditions and the following disclaimer. 
- * Redistributions in binary form must reproduce the above copyright 
-   notice, this list of conditions and the following disclaimer in the 
-   documentation and/or other materials provided with the distribution. 
- * Neither the name of KU Leuven nor the names of its contributors may be 
-   used to endorse or promote products derived from this software without 
-   specific prior written permission. 
+ * Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+ * Neither the name of KU Leuven nor the names of its contributors may be
+   used to endorse or promote products derived from this software without
+   specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
-POSSIBILITY OF SUCH DAMAGE. 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
 """
 
 import rospy
@@ -54,17 +54,19 @@ def safe_pose_to_file(f,P):
 class camera_robot_calibration_ros():
     def __init__(self):
         #read values from properties
-        self.base_frame_name=rospy.get_param('base_frame_name', '/base_link')
-        self.camera_frame_name=rospy.get_param('camera_frame_name', '/camera_link')
-        self.robot_ee_frame_name=rospy.get_param('robot_ee_frame_name', '/lwr_arm_link_7')
-        self.marker_frame_name=rospy.get_param('marker_frame_name', '/marker_frame')
+        self.base_frame_name=rospy.get_param('~base_frame_name', '/base_link')
+        self.camera_frame_name=rospy.get_param('~camera_frame_name', '/camera_link')
+        self.robot_ee_frame_name=rospy.get_param('~robot_ee_frame_name', '/lwr_arm_link_7')
+        self.marker_frame_name=rospy.get_param('~marker_frame_name', '/marker_frame')
+
+        rospy.loginfo("Got params! Base frame: " + self.base_frame_name + " Camera frame: " + self.camera_frame_name + " Robot end-effector name: " + self.robot_ee_frame_name + " Marker name: " + self.marker_frame_name)
         #self.save=rospy.get_param('auto_save_to_file', True)
-        
+
         #nominal positions of camera w.r.t world and marker mounted in the robot
         #this two frames are published
         unity_frame=Pose()
-        unity_frame.orientation.w=1; 
-        unity_frame.position.z=0.2; 
+        unity_frame.orientation.w=1;
+        unity_frame.position.z=0.2;
         # marker in ee
         self.ee_P_m=rospy.get_param('robot_ee_marker', unity_frame);
         # camera base in world
@@ -74,16 +76,16 @@ class camera_robot_calibration_ros():
         #PyKDL.Rotation.RPY(0,0,0.7)
         init_camera_pose=PyKDL.Frame((R),
                                      PyKDL.Vector(  0.126191,  0.00936311,    -1.21054))
-        
+
         self.w_P_c=rospy.get_param('nominal_pose_camera', posemath.toMsg(init_camera_pose));
-        
+
         #setup TF LISTENER AND BROADCASTER
         self.br = tf.TransformBroadcaster()
         self.listener = tf.TransformListener()
-        
+
         #vectors of saved data
         self.crc=camera_robot_calibration()
-        
+
         #create services
         self.s1 = rospy.Service('read_tfs', Empty, self.read_tfs)
         self.s2 = rospy.Service('compute_frames', Empty, self.compute_frames)
@@ -93,13 +95,13 @@ class camera_robot_calibration_ros():
         #save initial positions
         safe_pose_to_file(self.f,self.w_P_c)
         safe_pose_to_file(self.f,self.ee_P_m)
-        
-    def reset_frames(self,req): 
-        """empty vectors to reset algorithm"""  
+
+    def reset_frames(self,req):
+        """empty vectors to reset algorithm"""
         self.crc.reset_frames()
         return EmptyResponse()
-        
-        
+
+
     def current_pose(self, target_frame, origin_frame):
         if self.listener == None:
             rospy.loginfo("No transform listener available. Constructing new one.")
@@ -108,7 +110,7 @@ class camera_robot_calibration_ros():
         try:
             now = rospy.Time(0)
             self.listener.waitForTransform(target_frame, origin_frame, now, rospy.Duration(0.3))
-            
+
             (trans, rot) = self.listener.lookupTransform(origin_frame,target_frame, now)
 
             pose = Pose()
@@ -118,22 +120,22 @@ class camera_robot_calibration_ros():
             pose.orientation.x = rot[0]
             pose.orientation.y = rot[1]
             pose.orientation.z = rot[2]
-            pose.orientation.w = rot[3]           
+            pose.orientation.w = rot[3]
             return pose
         except (tf.LookupException, tf.ConnectivityException):
             print "Service call failed: %s" % e
             return 0
-        
-        
-        
-        
+
+
+
+
     def compute_frames(self,req):
             #read nominal poses, and set as initial positions
-    
+
             self.crc.set_intial_frames(posemath.fromMsg( self.w_P_c),
                                         posemath.fromMsg(self.ee_P_m))
 
-            
+
             #do several iteration of estimation
 
             n_comp=6
@@ -157,26 +159,33 @@ class camera_robot_calibration_ros():
             print self.crc.w_T_c
             self.ee_P_m = posemath.toMsg(self.crc.ee_T_m)
             self.w_P_c=posemath.toMsg(self.crc.w_T_c)
-            
+            print '\nee_P_m'
+            print self.ee_P_m
+            print '\nw_P_c'
+            print self.w_P_c
+            safe_pose_to_file(self.f,self.w_P_c)
+            safe_pose_to_file(self.f,self.ee_P_m)
+
+
             return EmptyResponse();
-        
+
     def read_tfs(self,req):
         #marker w.r.t. camera\print
-      
+
         ok=True
 
         #read target w.r.t. camera
-       
+
         w_P_ee=self.current_pose(self.robot_ee_frame_name,self.base_frame_name)
         if(w_P_ee==0):
-            ok=False 
+            ok=False
         c_P_m=self.current_pose(self.marker_frame_name,self.camera_frame_name)
         if(c_P_m==0):
             ok=False
-        
+
         #ee w.r.t. base
-      
-     
+
+
         if ok:
             print self.base_frame_name+" -> "+self.robot_ee_frame_name
             print w_P_ee
@@ -190,37 +199,37 @@ class camera_robot_calibration_ros():
             print len(self.crc._w_T_ee)
         else:
             print "error in retrieving a frame"
-            
+
         return EmptyResponse();
 
 
     def publish_tfs(self):
         #publish the estimated poses of marker and camera, in tf
-       
-        self.br.sendTransform((self.w_P_c.position.x,self.w_P_c.position.y,self.w_P_c.position.z),  
+
+        self.br.sendTransform((self.w_P_c.position.x,self.w_P_c.position.y,self.w_P_c.position.z),
                          (self.w_P_c.orientation.x,self.w_P_c.orientation.y,self.w_P_c.orientation.z,self.w_P_c.orientation.w),
                          rospy.Time.now(),
                          self.camera_frame_name,
                          self.base_frame_name)
-        
-        self.br.sendTransform((self.ee_P_m.position.x,self.ee_P_m.position.y,self.ee_P_m.position.z),  
+
+        self.br.sendTransform((self.ee_P_m.position.x,self.ee_P_m.position.y,self.ee_P_m.position.z),
                          (self.ee_P_m.orientation.x,self.ee_P_m.orientation.y,self.ee_P_m.orientation.z,self.ee_P_m.orientation.w),
                          rospy.Time.now(),
                          self.marker_frame_name+"_nominal",
                          self.robot_ee_frame_name)
-    
-        
 
-                
-            
+
+
+
+
             #
 
 if __name__ == '__main__':
-    
+
 
     rospy.init_node('camera_robot_calibration')
     est=camera_robot_calibration_ros()
-    
+
     while not rospy.is_shutdown():
       est.publish_tfs()
       rospy.sleep(0.01)

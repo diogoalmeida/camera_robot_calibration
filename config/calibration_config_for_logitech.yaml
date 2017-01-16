@@ -1,0 +1,4 @@
+base_frame_name: base_link
+camera_frame_name: usb_cam
+robot_ee_frame_name: l_gripper_tool_frame
+marker_frame_name: id_0
