@@ -1,5 +1,9 @@
 <launch>
   <node name="camera_robot_calibration" pkg="camera_robot_calibration" type="camera_robot_calibration.py" output="screen" >
-    <rosparam command="load" file="$(find camera_robot_calibration)/config/calibration_config_for_logitech.yaml"/>
+    <param name="base_frame_name" value="base_link"/>
+    <param name="camera_frame_name" value="usb_cam"/>
+    <param name="camera_name" value="usb_cam"/>
+    <param name="robot_ee_frame_name" value="l_gripper_tool_frame"/>
+    <param name="marker_frame_name" value="id_0"/>
   </node>
 </launch>

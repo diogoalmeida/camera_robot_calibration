@@ -28,6 +28,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
+import os
 import rospy
 import tf
 import PyKDL
@@ -40,24 +41,26 @@ from std_srvs.srv import Empty, EmptyResponse
 
 from camera_robot_calib.camera_robot_calibration_module import camera_robot_calibration
 
-def safe_pose_to_file(f,P):
-    f.write(str(P.position.x)+'\t')
-    f.write(str(P.position.y)+'\t')
-    f.write(str(P.position.z)+'\t')
-    f.write(str(P.orientation.x)+'\t')
-    f.write(str(P.orientation.y)+'\t')
-    f.write(str(P.orientation.z)+'\t')
-    f.write(str(P.orientation.w)+'\n')
-    f.flush()
-
 
 class camera_robot_calibration_ros():
+    def safe_pose_to_file(self, P):
+        f = open(os.path.expanduser('~') + '/.ros/camera_info/' + self.camera_name + '_extrinsics.yaml', 'w')
+        f.write(str(P.position.x)+'\t')
+        f.write(str(P.position.y)+'\t')
+        f.write(str(P.position.z)+'\t')
+        f.write(str(P.orientation.x)+'\t')
+        f.write(str(P.orientation.y)+'\t')
+        f.write(str(P.orientation.z)+'\t')
+        f.write(str(P.orientation.w)+'\n')
+        f.close()
+
     def __init__(self):
         #read values from properties
         self.base_frame_name=rospy.get_param('~base_frame_name', '/base_link')
         self.camera_frame_name=rospy.get_param('~camera_frame_name', '/camera_link')
         self.robot_ee_frame_name=rospy.get_param('~robot_ee_frame_name', '/lwr_arm_link_7')
         self.marker_frame_name=rospy.get_param('~marker_frame_name', '/marker_frame')
+        self.camera_name=rospy.get_param('~camera_name', 'head_camera')
 
         rospy.loginfo("Got params! Base frame: " + self.base_frame_name + " Camera frame: " + self.camera_frame_name + " Robot end-effector name: " + self.robot_ee_frame_name + " Marker name: " + self.marker_frame_name)
         #self.save=rospy.get_param('auto_save_to_file', True)
@@ -90,11 +93,6 @@ class camera_robot_calibration_ros():
         self.s1 = rospy.Service('read_tfs', Empty, self.read_tfs)
         self.s2 = rospy.Service('compute_frames', Empty, self.compute_frames)
         self.s3 = rospy.Service('reset_frames', Empty, self.reset_frames)
-        #save to file
-        self.f= open('data.txt', 'w')
-        #save initial positions
-        safe_pose_to_file(self.f,self.w_P_c)
-        safe_pose_to_file(self.f,self.ee_P_m)
 
     def reset_frames(self,req):
         """empty vectors to reset algorithm"""
@@ -131,14 +129,13 @@ class camera_robot_calibration_ros():
 
     def compute_frames(self,req):
             #read nominal poses, and set as initial positions
-
             self.crc.set_intial_frames(posemath.fromMsg( self.w_P_c),
                                         posemath.fromMsg(self.ee_P_m))
 
 
             #do several iteration of estimation
 
-            n_comp=6
+            n_comp=80
             residue_max=[]
             residue_mod=[]
             for i in range(n_comp):
@@ -163,15 +160,13 @@ class camera_robot_calibration_ros():
             print self.ee_P_m
             print '\nw_P_c'
             print self.w_P_c
-            safe_pose_to_file(self.f,self.w_P_c)
-            safe_pose_to_file(self.f,self.ee_P_m)
-
-
+            self.safe_pose_to_file(self.w_P_c)
             return EmptyResponse();
 
     def read_tfs(self,req):
         #marker w.r.t. camera\print
 
+        print(os.getcwd())
         ok=True
 
         #read target w.r.t. camera
@@ -191,9 +186,6 @@ class camera_robot_calibration_ros():
             print w_P_ee
             print self.camera_frame_name + " -> " + self.marker_frame_name
             print c_P_m
-            #save data
-            safe_pose_to_file(self.f,w_P_ee)
-            safe_pose_to_file(self.f,c_P_m)
             self.crc.store_frames(posemath.fromMsg( w_P_ee),posemath.fromMsg(c_P_m))
             print "saved so far"
             print len(self.crc._w_T_ee)
