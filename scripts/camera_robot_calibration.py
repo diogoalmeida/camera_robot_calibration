@@ -29,10 +29,12 @@ POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
+import sys
 import rospy
 import tf
 import PyKDL
 import numpy as num
+import argparse
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose, Point, Quaternion
 from tf_conversions import posemath
@@ -63,6 +65,10 @@ class camera_robot_calibration_ros():
         self.marker_frame_name=rospy.get_param('~marker_frame_name', '/marker_frame')
         self.camera_name=rospy.get_param('~camera_name', 'head_camera')
 
+        parser = argparse.ArgumentParser(description='Camera robot calibration node')
+        parser.add_argument('-m', '--manual', default=False)
+        args = parser.parse_args()
+
         rospy.loginfo("Got params! Base frame: " + self.base_frame_name + " Camera frame: " + self.camera_frame_name + " Robot end-effector name: " + self.robot_ee_frame_name + " Marker name: " + self.marker_frame_name)
         #self.save=rospy.get_param('auto_save_to_file', True)
 
@@ -90,10 +96,24 @@ class camera_robot_calibration_ros():
         #vectors of saved data
         self.crc=camera_robot_calibration()
 
-        #create services
-        self.s1 = rospy.Service('read_tfs', Empty, self.read_tfs)
-        self.s2 = rospy.Service('compute_frames', Empty, self.compute_frames)
-        self.s3 = rospy.Service('reset_frames', Empty, self.reset_frames)
+        if not args.manual:
+            #create services
+            self.s1 = rospy.Service('read_tfs', Empty, self.read_tfs)
+            self.s2 = rospy.Service('compute_frames', Empty, self.compute_frames)
+            self.s3 = rospy.Service('reset_frames', Empty, self.reset_frames)
+        else:
+            #loop and wait for user input
+            while not rospy.is_shutdown():
+                string = raw_input("Press 'c' to collect a measurement, 'u' to update the estimate and 'r' to reset\n")
+
+                if string == 'c':
+                    self.read_tfs(Empty)
+                elif string == 'u':
+                    self.compute_frames(Empty)
+                elif string == 'r':
+                    self.reset_frames(Empty)
+                else:
+                    print("Unknown command: " % string)
 
     def reset_frames(self,req):
         """empty vectors to reset algorithm"""
