@@ -141,12 +141,8 @@ class camera_robot_calibration_ros():
             pose.orientation.z = rot[2]
             pose.orientation.w = rot[3]
             return pose
-        except (tf.LookupException, tf.ConnectivityException):
-            print "Service call failed: %s" % e
-            return 0
-
-
-
+        except:
+            raise
 
     def compute_frames(self,req):
             #read nominal poses, and set as initial positions
@@ -186,23 +182,12 @@ class camera_robot_calibration_ros():
 
     def read_tfs(self,req):
         #marker w.r.t. camera\print
-
         print(os.getcwd())
-        ok=True
 
         #read target w.r.t. camera
-
-        w_P_ee=self.current_pose(self.robot_ee_frame_name,self.base_frame_name)
-        if(w_P_ee==0):
-            ok=False
-        c_P_m=self.current_pose(self.marker_frame_name,self.camera_frame_name)
-        if(c_P_m==0):
-            ok=False
-
-        #ee w.r.t. base
-
-
-        if ok:
+        try:
+            w_P_ee = self.current_pose(self.robot_ee_frame_name,self.base_frame_name)
+            c_P_m=self.current_pose(self.marker_frame_name,self.camera_frame_name)
             print self.base_frame_name+" -> "+self.robot_ee_frame_name
             print w_P_ee
             print self.camera_frame_name + " -> " + self.marker_frame_name
@@ -210,8 +195,8 @@ class camera_robot_calibration_ros():
             self.crc.store_frames(posemath.fromMsg( w_P_ee),posemath.fromMsg(c_P_m))
             print "saved so far"
             print len(self.crc._w_T_ee)
-        else:
-            print "error in retrieving a frame"
+        except tf.Exception as e:
+            rospy.logerr("Error in retrieving TF frame. Is the marker being detected?")
 
         return EmptyResponse();
 
