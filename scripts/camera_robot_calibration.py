@@ -218,7 +218,7 @@ if __name__ == '__main__':
     rospy.init_node('camera_robot_calibration')
     parser = argparse.ArgumentParser(description='Camera robot calibration node')
     parser.add_argument('-m', '--manual', default=False)
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     est=camera_robot_calibration_ros(args.manual)
     if args.manual:
