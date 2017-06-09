@@ -45,13 +45,14 @@ from camera_robot_calib.camera_robot_calibration_module import camera_robot_cali
 class camera_robot_calibration_ros():
     def safe_pose_to_file(self, P):
         f = open(os.path.expanduser('~') + '/.ros/camera_info/' + self.camera_name + '_extrinsics.yaml', 'w')
-        f.write(str(P.position.x)+'\t')
-        f.write(str(P.position.y)+'\t')
-        f.write(str(P.position.z)+'\t')
-        f.write(str(P.orientation.x)+'\t')
-        f.write(str(P.orientation.y)+'\t')
-        f.write(str(P.orientation.z)+'\t')
-        f.write(str(P.orientation.w)+'\n')
+        f.write('pose: [')
+        f.write(str(P.position.x)+', ')
+        f.write(str(P.position.y)+', ')
+        f.write(str(P.position.z)+', ')
+        f.write(str(P.orientation.x)+', ')
+        f.write(str(P.orientation.y)+', ')
+        f.write(str(P.orientation.z)+', ')
+        f.write(str(P.orientation.w)+ ']\n')
         f.close()
 
     def __init__(self):
