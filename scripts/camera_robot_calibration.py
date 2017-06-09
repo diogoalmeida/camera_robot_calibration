@@ -36,6 +36,7 @@ import PyKDL
 import numpy as num
 import argparse
 import threading
+import signal
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose, Point, Quaternion
 from tf_conversions import posemath
@@ -200,8 +201,11 @@ class camera_robot_calibration_ros():
                          self.marker_frame_name+"_nominal",
                          self.robot_ee_frame_name)
 
+def create_exception():
+    raise ThreadException
+
 def parse_keyboard(est):
-    while not rospy.is_shutdown():
+    while True:
         # Parse user input
         string = raw_input("Press 'c' to collect a measurement, 'u' to update the estimate and 'r' to reset\n")
 
@@ -230,4 +234,4 @@ if __name__ == '__main__':
       est.publish_tfs()
       rospy.sleep(0.01)
 
-    rospy.spin()
+    os.kill(os.getpid(), signal.SIGKILL)
