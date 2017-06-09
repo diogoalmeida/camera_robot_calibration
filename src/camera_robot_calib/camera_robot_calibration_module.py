@@ -52,19 +52,19 @@ def load_pose_from_file(fname):
             w_T_ee_vec.append(array[i])
             c_T_m_vec.append(array[i+1])
         return (w_T_c_in,ee_T_m_in,w_T_ee_vec,c_T_m_vec)
-        
-            
-    
+
+
+
 
 
 def create_A_B(w_T_ee, ee_T_mn,w_T_cn,cr_T_mr):
     """
     Generates the A and B sub-matrices  for the optimization problem, for each set of poses
-    
+
     Parameters
     ----------
     w_T_ee : geometry_msgs.Pose
-        pose from the common frame 'w' to the link of the robot where the marker is fastened (end-effector), 
+        pose from the common frame 'w' to the link of the robot where the marker is fastened (end-effector),
         read from the robot
     ee_T_mn : geometry_msgs.Pose
         nominal pose from end-effector to marker reference.

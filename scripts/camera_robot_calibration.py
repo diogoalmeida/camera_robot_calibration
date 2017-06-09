@@ -35,6 +35,7 @@ import tf
 import PyKDL
 import numpy as num
 import argparse
+import threading
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose, Point, Quaternion
 from tf_conversions import posemath
@@ -57,17 +58,13 @@ class camera_robot_calibration_ros():
         f.write(str(P.orientation.w)+ ']\n')
         f.close()
 
-    def __init__(self):
+    def __init__(self, manual):
         #read values from properties
         self.base_frame_name=rospy.get_param('~base_frame_name', '/base_link')
         self.camera_frame_name=rospy.get_param('~camera_frame_name', '/camera_link')
         self.robot_ee_frame_name=rospy.get_param('~robot_ee_frame_name', '/lwr_arm_link_7')
         self.marker_frame_name=rospy.get_param('~marker_frame_name', '/marker_frame')
         self.camera_name=rospy.get_param('~camera_name', 'head_camera')
-
-        parser = argparse.ArgumentParser(description='Camera robot calibration node')
-        parser.add_argument('-m', '--manual', default=False)
-        args = parser.parse_args()
 
         rospy.loginfo("Got params! Base frame: " + self.base_frame_name + " Camera frame: " + self.camera_frame_name + " Robot end-effector name: " + self.robot_ee_frame_name + " Marker name: " + self.marker_frame_name)
         #self.save=rospy.get_param('auto_save_to_file', True)
@@ -96,24 +93,11 @@ class camera_robot_calibration_ros():
         #vectors of saved data
         self.crc=camera_robot_calibration()
 
-        if not args.manual:
+        if not manual:
             #create services
             self.s1 = rospy.Service('read_tfs', Empty, self.read_tfs)
             self.s2 = rospy.Service('compute_frames', Empty, self.compute_frames)
             self.s3 = rospy.Service('reset_frames', Empty, self.reset_frames)
-        else:
-            #loop and wait for user input
-            while not rospy.is_shutdown():
-                string = raw_input("Press 'c' to collect a measurement, 'u' to update the estimate and 'r' to reset\n")
-
-                if string == 'c':
-                    self.read_tfs(Empty)
-                elif string == 'u':
-                    self.compute_frames(Empty)
-                elif string == 'r':
-                    self.reset_frames(Empty)
-                else:
-                    print("Unknown command: " % string)
 
     def reset_frames(self,req):
         """empty vectors to reset algorithm"""
@@ -146,7 +130,7 @@ class camera_robot_calibration_ros():
 
     def compute_frames(self,req):
             #read nominal poses, and set as initial positions
-            self.crc.set_intial_frames(posemath.fromMsg( self.w_P_c),
+            self.crc.set_initial_frames(posemath.fromMsg( self.w_P_c),
                                         posemath.fromMsg(self.ee_P_m))
 
 
@@ -216,17 +200,31 @@ class camera_robot_calibration_ros():
                          self.marker_frame_name+"_nominal",
                          self.robot_ee_frame_name)
 
+def parse_keyboard(est):
+    while not rospy.is_shutdown():
+        # Parse user input
+        string = raw_input("Press 'c' to collect a measurement, 'u' to update the estimate and 'r' to reset\n")
 
-
-
-
-            #
+        if string == 'c':
+            est.read_tfs(Empty)
+        elif string == 'u':
+            est.compute_frames(Empty)
+        elif string == 'r':
+            est.reset_frames(Empty)
+        else:
+            print("Unknown command: ", string)
 
 if __name__ == '__main__':
-
-
     rospy.init_node('camera_robot_calibration')
-    est=camera_robot_calibration_ros()
+    parser = argparse.ArgumentParser(description='Camera robot calibration node')
+    parser.add_argument('-m', '--manual', default=False)
+    args = parser.parse_args()
+
+    est=camera_robot_calibration_ros(args.manual)
+    if args.manual:
+        thread = threading.Thread(target = parse_keyboard, args=(est,))
+        thread.deamon = True
+        thread.start()
 
     while not rospy.is_shutdown():
       est.publish_tfs()
