@@ -43,7 +43,7 @@ from camera_robot_calib.camera_robot_calibration_module import camera_robot_cali
 
 
 class camera_robot_calibration_ros():
-    def safe_pose_to_file(self, P):
+    def save_pose_to_file(self, P):
         f = open(os.path.expanduser('~') + '/.ros/camera_info/' + self.camera_name + '_extrinsics.yaml', 'w')
         f.write('pose: [')
         f.write(str(P.position.x)+', ')
@@ -161,7 +161,7 @@ class camera_robot_calibration_ros():
             print self.ee_P_m
             print '\nw_P_c'
             print self.w_P_c
-            self.safe_pose_to_file(self.w_P_c)
+            self.save_pose_to_file(self.w_P_c)
             return EmptyResponse();
 
     def read_tfs(self,req):
