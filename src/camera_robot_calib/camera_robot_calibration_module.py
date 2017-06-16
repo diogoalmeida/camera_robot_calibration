@@ -117,7 +117,7 @@ class camera_robot_calibration():
         self._w_T_ee=[]
         self._c_T_m=[]
                 
-    def set_intial_frames(self,w_T_c,ee_T_m):
+    def set_initial_frames(self,w_T_c,ee_T_m):
         """"
         Set initial estimates
         

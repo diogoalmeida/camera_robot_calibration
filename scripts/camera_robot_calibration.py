@@ -29,6 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 """
 
 import os
+import errno
 import sys
 import rospy
 import tf
@@ -48,7 +49,15 @@ from camera_robot_calib.camera_robot_calibration_module import camera_robot_cali
 
 class camera_robot_calibration_ros():
     def save_pose_to_file(self, P):
-        f = open(os.path.expanduser('~') + '/.ros/camera_info/' + self.camera_name + '_extrinsics.yaml', 'w')
+        filename = os.path.expanduser('~') + '/.ros/camera_info/' + self.camera_name + '_extrinsics.yaml'
+        if not os.path.exists(os.path.dirname(filename)):
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError as exc: # Guard against race condition
+                print("srgsrg")
+                if exc.errno != errno.EEXIST:
+                    raise
+        f = open(filename, 'w')
         f.write('pose: [')
         f.write(str(P.position.x)+', ')
         f.write(str(P.position.y)+', ')
@@ -57,6 +66,7 @@ class camera_robot_calibration_ros():
         f.write(str(P.orientation.y)+', ')
         f.write(str(P.orientation.z)+', ')
         f.write(str(P.orientation.w)+ ']\n')
+        f.write('base_frame: ' + self.base_frame_name)
         f.close()
 
     def __init__(self, manual):
@@ -73,10 +83,10 @@ class camera_robot_calibration_ros():
         #nominal positions of camera w.r.t world and marker mounted in the robot
         #this two frames are published
         unity_frame=Pose()
-        unity_frame.orientation.w=1;
-        unity_frame.position.z=0.2;
+        unity_frame.orientation.w=1
+        unity_frame.position.z=0.2
         # marker in ee
-        self.ee_P_m=rospy.get_param('robot_ee_marker', unity_frame);
+        self.ee_P_m=rospy.get_param('robot_ee_marker', unity_frame)
         # camera base in world
         R=PyKDL.Rotation(PyKDL.Vector( -0.220699,     0.66163,   -0.716615),
                          PyKDL.Vector(0.13597,    0.748429,    0.649128),
@@ -85,7 +95,7 @@ class camera_robot_calibration_ros():
         init_camera_pose=PyKDL.Frame((R),
                                      PyKDL.Vector(  0.126191,  0.00936311,    -1.21054))
 
-        self.w_P_c=rospy.get_param('nominal_pose_camera', posemath.toMsg(init_camera_pose));
+        self.w_P_c=rospy.get_param('nominal_pose_camera', posemath.toMsg(init_camera_pose))
 
         #setup TF LISTENER AND BROADCASTER
         self.br = tf.TransformBroadcaster()
@@ -143,7 +153,7 @@ class camera_robot_calibration_ros():
             for i in range(n_comp):
                 print '\ncurrent position'
                 print self.crc.w_T_c.p
-                residue= self.crc.compute_frames();
+                residue= self.crc.compute_frames()
                 r2=residue.transpose()*residue
                 residue_mod.append( num.sqrt (r2[0,0]))
                 residue_max.append(num.max(num.abs(residue)))
@@ -163,7 +173,7 @@ class camera_robot_calibration_ros():
             print '\nw_P_c'
             print self.w_P_c
             self.save_pose_to_file(self.w_P_c)
-            return EmptyResponse();
+            return EmptyResponse()
 
     def read_tfs(self,req):
         #marker w.r.t. camera\print
@@ -183,7 +193,7 @@ class camera_robot_calibration_ros():
         except tf.Exception as e:
             rospy.logerr("Error in retrieving TF frame. Is the marker being detected?")
 
-        return EmptyResponse();
+        return EmptyResponse()
 
 
     def publish_tfs(self):
